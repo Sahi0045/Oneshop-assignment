@@ -236,7 +236,7 @@ export class NotificationService {
     let notification: any;
 
     try {
-      notification = await this.prisma.notification.create({
+      notification = await (this.prisma as any).notification.create({
         data: {
           userId,
           type,

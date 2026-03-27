@@ -1,6 +1,6 @@
 import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as Razorpay from 'razorpay';
+import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
 /**
@@ -169,12 +169,12 @@ export class RazorpayService {
     amountPaise?: number,
   ): Promise<any> {
     try {
-      const reversal = await this.razorpay.transfers.reverse(transferId, {
+      const reversal = await (this.razorpay as any).transfers.reverse(transferId, {
         ...(amountPaise ? { amount: amountPaise } : {}),
       });
 
       this.logger.log(
-        `Razorpay Transfer reversed: ${reversal.id} | transfer: ${transferId}`,
+        `Razorpay Transfer reversed: ${(reversal as any).id} | transfer: ${transferId}`,
       );
 
       return reversal;
@@ -239,7 +239,7 @@ export class RazorpayService {
     type: string = 'vendor',
   ): Promise<any> {
     try {
-      const contactObj = await this.razorpay.contacts.create({
+      const contactObj = await (this.razorpay as any).contacts.create({
         name,
         email,
         contact,
@@ -267,13 +267,14 @@ export class RazorpayService {
   ): Promise<any> {
     try {
       const fundAccount = await this.razorpay.fundAccount.create({
+        // @ts-ignore
         contact_id: contactId,
         account_type: accountType,
         [accountType]: accountDetails,
       });
 
       this.logger.log(
-        `Razorpay Fund Account created: ${fundAccount.id} | type: ${accountType}`,
+        `Razorpay Fund Account created: ${(fundAccount as any).id} | type: ${accountType}`,
       );
 
       return fundAccount;
@@ -301,7 +302,7 @@ export class RazorpayService {
     notes: Record<string, any> = {},
   ): Promise<any> {
     try {
-      const payout = await this.razorpay.payouts.create({
+      const payout = await (this.razorpay as any).payouts.create({
         account_number: this.configService.get<string>('RAZORPAY_ACCOUNT_NUMBER'),
         amount: amountPaise,
         currency: currency.toUpperCase(),

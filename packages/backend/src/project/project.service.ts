@@ -226,7 +226,7 @@ export class ProjectService {
             totalReviews: true,
             createdAt: true,
             _count: {
-              select: { projects: true },
+              select: { projectsAsClient: true },
             },
           },
         },

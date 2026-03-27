@@ -135,12 +135,16 @@ export class BidAnalyticsService {
       where: { id: projectId },
       include: {
         skills: {
-          select: { id: true, name: true },
+          include: {
+            skill: {
+              select: { id: true, name: true },
+            },
+          },
         },
       },
     });
 
-    if (!project || project.skills.length === 0) {
+    if (!project || (project as any).skills.length === 0) {
       return 0;
     }
 
@@ -162,14 +166,14 @@ export class BidAnalyticsService {
       return 0;
     }
 
-    const projectSkillIds = new Set(project.skills.map((s) => s.id));
+    const projectSkillIds = new Set((project as any).skills.map((s: any) => s.skill.id));
     const freelancerSkillIds = new Set(
       freelancer.skills.map((us) => us.skill.id),
     );
 
     // Calculate intersection
-    const matchingSkills = [...projectSkillIds].filter((id) =>
-      freelancerSkillIds.has(id),
+    const matchingSkills = Array.from(projectSkillIds).filter((id) =>
+      freelancerSkillIds.has(id as string),
     );
 
     const matchPercentage =

@@ -164,7 +164,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    * Useful for distributed locks and idempotency guards.
    */
   async setnx(key: string, value: string | number): Promise<0 | 1> {
-    return this.client.setnx(key, String(value));
+    // @ts-ignore
+    return (this.client as any).setnx(key, String(value));
   }
 
   /**
@@ -214,7 +215,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    * Returns 1 if the TTL was set, 0 if the key does not exist.
    */
   async expire(key: string, seconds: number): Promise<0 | 1> {
-    return this.client.expire(key, seconds);
+    // @ts-ignore
+    return (this.client as any).expire(key, seconds);
   }
 
   /**

@@ -165,7 +165,7 @@ export class BidService {
               avatar: true,
               hourlyRate: true,
               rating: true,
-              reviewCount: true,
+              totalReviews: true,
               bio: true,
               skills: { include: { skill: { select: { name: true } } } },
             },
@@ -203,7 +203,7 @@ export class BidService {
       amount: dto.amount,
       deliveryDays: dto.deliveryDays,
       skillMatchScore,
-      clientId: (bid.project as any)?.client?.id,
+      clientId: (bid as any).project?.client?.id,
       occurredAt: new Date().toISOString(),
     }).catch((err) => this.logger.error('Kafka emit BID_RECEIVED failed', err));
 
@@ -430,6 +430,10 @@ export class BidService {
           clientId,
           freelancerId,
           bidId,
+          title:        (bid as any).project?.title ?? 'Contract for ' + projectId,
+          description:  (bid as any).project?.description ?? null,
+          currency:     (bid as any).project?.currency ?? 'usd',
+          terms:        (bid as any).coverLetter ?? null,
           status: ContractStatus.ACTIVE,
           amount: (bid as any).amount,
           startDate: new Date(),
@@ -441,7 +445,7 @@ export class BidService {
         where: { id: projectId },
         data: {
           status: ProjectStatus.IN_PROGRESS,
-          contractId: newContract.id,
+          contract: { connect: { id: newContract.id } },
           updatedAt: new Date(),
         },
       });
@@ -565,11 +569,11 @@ export class BidService {
             bio:         true,
             hourlyRate:  true,
             rating:      true,
-            reviewCount: true,
-            skills:      { select: { name: true } },
+            skills:      { include: { skill: { select: { name: true } } } },
             _count: {
-              select: { contracts: true },
+              select: { contractsAsFreelancer: true },
             },
+            totalReviews: true,
           },
         },
       },

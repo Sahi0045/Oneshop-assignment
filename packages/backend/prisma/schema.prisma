@@ -75,6 +75,7 @@ enum TransactionType {
   DISPUTE_HOLD
   DISPUTE_RELEASE
   SERVICE_FEE
+  PLATFORM_FEE
 }
 
 enum TransactionStatus {
@@ -142,18 +143,23 @@ model User {
   reviewsWritten        Review[]        @relation("ReviewerReviews")
   reviewsReceived       Review[]        @relation("RevieweeReviews")
   badges                Badge[]
-  messagesSent          Message[]
+  messagesSent          Message[]       @relation("MessageSender")
+  projectMessagesSent   ProjectMessage[] @relation("ProjectMessageSender")
   notifications         Notification[]
+  conversationParticipations ConversationParticipant[]
   transactionsFrom      Transaction[]   @relation("FromUser")
   transactionsTo        Transaction[]   @relation("ToUser")
   transactions          Transaction[]   @relation("UserTransactions")
   stripeAccountId       String?         @map("stripe_account_id")
   stripeAccountStatus   String?         @map("stripe_account_status")
   totalSpent            Decimal         @default(0) @db.Decimal(10, 2) @map("total_spent")
-  disputesFiled         Dispute[]       @relation("DisputeFiler")
+  disputesFiled         Dispute[]       @relation("DisputeInitiator")
+  disputesReceived      Dispute[]       @relation("DisputeRespondent")
   disputesResolved      Dispute[]       @relation("DisputeResolver")
+  projectsAsFreelancer  Project[]       @relation("FreelancerProjects")
   kycVerifications      KYCVerification[]
   skills                UserSkill[]
+  messageReactions      MessageReaction[]
 
   @@index([email])
   @@index([role])
@@ -179,19 +185,21 @@ model Project {
   bidCount    Int               @default(0) @map("bid_count")
   viewCount   Int               @default(0) @map("view_count")
   freelancerId String?          @map("freelancer_id") @db.Uuid
-  contractId  String?           @unique @map("contract_id") @db.Uuid
   deletedAt   DateTime?         @map("deleted_at")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
 
   // Relations
-  client     User              @relation("ClientProjects", fields: [clientId], references: [id], onDelete: Cascade)
-  bids       Bid[]
-  contract   Contract?         @relation("ProjectContract", fields: [contractId], references: [id])
-  messages   Message[]
-  skills     ProjectSkill[]
-  categories ProjectCategory[]
-  milestones Milestone[]
+  client      User              @relation("ClientProjects", fields: [clientId], references: [id], onDelete: Cascade)
+  freelancer  User?             @relation("FreelancerProjects", fields: [freelancerId], references: [id])
+  categoryId  String?           @map("category_id") @db.Uuid
+  category    Category?         @relation(fields: [categoryId], references: [id])
+  bids        Bid[]
+  contract    Contract?
+  projectMessages ProjectMessage[]
+  skills      ProjectSkill[]
+  categories  ProjectCategory[]
+  milestones  Milestone[]
 
   @@index([clientId])
   @@index([freelancerId])
@@ -232,12 +240,16 @@ model Bid {
 
 model Contract {
   id           String         @id @default(uuid()) @db.Uuid
-  projectId    String         @map("project_id") @db.Uuid
+  projectId    String         @unique @map("project_id") @db.Uuid
   bidId        String         @unique @map("bid_id") @db.Uuid
   freelancerId String         @map("freelancer_id") @db.Uuid
   clientId     String         @map("client_id") @db.Uuid
+  title        String
+  description  String?        @db.Text
   amount       Decimal        @db.Decimal(10, 2)
+  currency     String         @default("usd")
   status       ContractStatus @default(ACTIVE)
+  terms        String?        @db.Text
   startDate    DateTime       @default(now()) @map("start_date")
   endDate      DateTime?      @map("end_date")
   disputeReason String?        @map("dispute_reason") @db.Text
@@ -249,7 +261,7 @@ model Contract {
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
   // Relations
-  project      Project?      @relation("ProjectContract")
+  project      Project       @relation(fields: [projectId], references: [id])
   bid          Bid           @relation(fields: [bidId], references: [id])
   freelancer   User          @relation("FreelancerContracts", fields: [freelancerId], references: [id])
   client       User          @relation("ClientContracts", fields: [clientId], references: [id])
@@ -295,10 +307,15 @@ model Milestone {
   durationDays Int             @map("duration_days")
   order        Int             @default(1)
   status       MilestoneStatus @default(PENDING)
+  currency     String          @default("usd")
   dueDate      DateTime?       @map("due_date")
   submittedAt  DateTime?       @map("submitted_at")
   approvedAt   DateTime?       @map("approved_at")
+  approvalNote String?         @map("approval_note") @db.Text
+  submissionNote String?        @map("submission_note") @db.Text
   revisionNote String?         @map("revision_note") @db.Text
+  paidAt       DateTime?       @map("paid_at")
+  deliverableUrls Json?        @map("deliverable_urls") @db.JsonB
   createdAt    DateTime        @default(now()) @map("created_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
@@ -395,7 +412,8 @@ model Badge {
 model Dispute {
   id           String        @id @default(uuid()) @db.Uuid
   contractId   String        @map("contract_id") @db.Uuid
-  filedById    String        @map("filed_by_id") @db.Uuid
+  initiatorId  String        @map("initiator_id") @db.Uuid
+  respondentId String        @map("respondent_id") @db.Uuid
   reason       String        @db.Text
   description  String        @db.Text
   evidence     String[]      @default([])
@@ -409,12 +427,14 @@ model Dispute {
 
   // Relations
   contract   Contract @relation(fields: [contractId], references: [id])
-  filedBy    User     @relation("DisputeFiler", fields: [filedById], references: [id])
+  initiator  User     @relation("DisputeInitiator", fields: [initiatorId], references: [id])
+  respondent User     @relation("DisputeRespondent", fields: [respondentId], references: [id])
   resolvedBy User?    @relation("DisputeResolver", fields: [resolvedById], references: [id])
 
   @@index([contractId])
   @@index([status])
-  @@index([filedById])
+  @@index([initiatorId])
+  @@index([respondentId])
   @@map("disputes")
 }
 
@@ -442,7 +462,7 @@ model Conversation {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   participants ConversationParticipant[]
-  messages     ChatMessage[]
+  messages     Message[]
 
   @@index([projectId])
   @@index([contractId])
@@ -458,13 +478,14 @@ model ConversationParticipant {
   lastReadAt     DateTime @default(now()) @map("last_read_at")
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
   @@index([userId])
   @@map("conversation_participants")
 }
 
-model ChatMessage {
+model Message {
   id             String   @id @default(uuid()) @db.Uuid
   conversationId String   @map("conversation_id") @db.Uuid
   senderId       String   @map("sender_id") @db.Uuid
@@ -479,11 +500,15 @@ model ChatMessage {
   createdAt      DateTime @default(now()) @map("created_at")
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id])
+  replyTo      Message?     @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies      Message[]    @relation("MessageReplies")
+  reactions    MessageReaction[]
 
   @@index([conversationId])
   @@index([senderId])
   @@index([createdAt(sort: Desc)])
-  @@map("chat_messages")
+  @@map("messages")
 }
 
 model MessageReaction {
@@ -493,12 +518,15 @@ model MessageReaction {
   emoji     String
   createdAt DateTime @default(now()) @map("created_at")
 
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([messageId, userId, emoji])
   @@index([messageId])
   @@map("message_reactions")
 }
 
-model Message {
+model ProjectMessage {
   id          String   @id @default(uuid()) @db.Uuid
   projectId   String   @map("project_id") @db.Uuid
   senderId    String   @map("sender_id") @db.Uuid
@@ -509,12 +537,12 @@ model Message {
 
   // Relations
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sender  User    @relation(fields: [senderId], references: [id])
+  sender  User    @relation("ProjectMessageSender", fields: [senderId], references: [id])
 
   @@index([projectId])
   @@index([senderId])
   @@index([createdAt(sort: Desc)])
-  @@map("messages")
+  @@map("project_messages")
 }
 
 model Notification {
@@ -523,8 +551,10 @@ model Notification {
   type      String
   title     String?
   message   String   @db.Text
-  metadata  Json?    @db.JsonB
+  body      String?  @db.Text
+  data      Json?    @db.JsonB
   isRead    Boolean  @default(false) @map("is_read")
+  readAt    DateTime? @map("read_at")
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
@@ -558,7 +588,8 @@ model Category {
   // Relations
   parent   Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children Category[]        @relation("CategoryHierarchy")
-  projects ProjectCategory[]
+  projects Project[]
+  projectCategories ProjectCategory[]
 
   @@map("categories")
 }
