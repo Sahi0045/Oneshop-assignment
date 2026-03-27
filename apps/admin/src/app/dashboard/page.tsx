@@ -9,7 +9,7 @@ export default function DashboardPage() {
     queryKey: ['admin-stats'],
     queryFn: async () => {
       const { data } = await api.get('/admin/stats');
-      return data;
+      return data.data;
     },
   });
 

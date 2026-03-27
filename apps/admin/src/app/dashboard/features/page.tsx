@@ -14,7 +14,7 @@ export default function FeaturesPage() {
     queryKey: ['admin-features'],
     queryFn: async () => {
       const { data } = await api.get('/admin/features');
-      return data;
+      return data.data;
     },
   });
 

@@ -11,7 +11,7 @@ export default function AnalyticsPage() {
     queryKey: ['admin-analytics'],
     queryFn: async () => {
       const { data } = await api.get('/admin/analytics');
-      return data;
+      return data.data;
     },
   });
 

@@ -100,6 +100,37 @@ export class AdminService {
     });
   }
 
+  async getProjects(filters?: { search?: string; status?: string }) {
+    const where: any = {};
+
+    if (filters?.search) {
+      where.OR = [
+        { title: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters?.status && filters.status !== 'all') {
+      where.status = filters.status;
+    }
+
+    return this.prisma.project.findMany({
+      where,
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        category: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async verifyUser(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

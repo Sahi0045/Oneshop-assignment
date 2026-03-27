@@ -19,7 +19,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data } = await api.post('/auth/login', { email, password });
+      const { data: response } = await api.post('/auth/login', { email, password });
+      const { data } = response;
       
       if (data.user.role !== 'ADMIN') {
         setError('Access denied. Admin privileges required.');

@@ -31,6 +31,16 @@ export class AdminController {
     return this.adminService.getStats();
   }
 
+  @Get('projects')
+  async getProjects(
+    @Request() req,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+  ) {
+    this.ensureAdmin(req.user);
+    return this.adminService.getProjects({ search, status });
+  }
+
   @Get('users')
   async getUsers(
     @Request() req,

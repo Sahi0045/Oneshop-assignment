@@ -13,7 +13,7 @@ export default function DisputesPage() {
     queryKey: ['admin-disputes'],
     queryFn: async () => {
       const { data } = await api.get('/admin/disputes');
-      return data;
+      return data.data;
     },
   });
 

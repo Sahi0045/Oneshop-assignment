@@ -16,7 +16,7 @@ export default function UsersPage() {
       const { data } = await api.get('/admin/users', {
         params: { search, filter },
       });
-      return data;
+      return data.data;
     },
   });
 
