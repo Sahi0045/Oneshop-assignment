@@ -85,7 +85,7 @@ export function useAuth() {
       // Clear any stale query cache from previous sessions
       queryClient.clear();
 
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
     },
     onError: () => {
@@ -119,7 +119,7 @@ export function useAuth() {
 
       queryClient.clear();
 
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
     },
     onError: () => {

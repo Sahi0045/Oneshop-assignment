@@ -30,6 +30,11 @@ export default function LoginPage() {
   });
 
   const isPending = isLoggingIn || isSubmitting;
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ── Submit handler ─────────────────────────────────────────────────────────
 
@@ -242,11 +247,11 @@ export default function LoginPage() {
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               aria-pressed={showPassword}
             >
-              {showPassword ? (
+              {mounted && (showPassword ? (
                 <EyeOff className="h-4 w-4" aria-hidden="true" />
               ) : (
                 <Eye className="h-4 w-4" aria-hidden="true" />
-              )}
+              ))}
             </button>
           </div>
 

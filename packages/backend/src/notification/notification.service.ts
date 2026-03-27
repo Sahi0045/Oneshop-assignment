@@ -6,7 +6,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sgMail from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { RedisService } from '../common/redis/redis.service';
 

@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import {
   Shield,
   MessageSquare,
@@ -218,6 +220,13 @@ const footerLinks = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const cookieStore = cookies();
+  const token = cookieStore.get('accessToken');
+
+  if (token) {
+    redirect('/dashboard');
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* ── Navigation ──────────────────────────────────────────────────────── */}

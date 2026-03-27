@@ -12,9 +12,9 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { RedisService } from '../common/redis/redis.service';
 import { RegisterDto } from './dto/register.dto';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import * as sgMail from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 
 export interface JwtPayload {
   sub: string;
