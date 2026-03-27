@@ -1,0 +1,1421 @@
+openapi: 3.0.3
+info:
+  title: Freelancer Platform API
+  description: |
+    Comprehensive API for a global freelance marketplace with secure payments, 
+    verified profiles, milestone-based delivery, and dispute resolution.
+  version: 1.0.0
+  contact:
+    name: NivixPe Team
+    email: api@freelancerplatform.com
+
+servers:
+  - url: https://api.freelancerplatform.com/v1
+    description: Production
+  - url: https://staging-api.freelancerplatform.com/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Local Development
+
+tags:
+  - name: Auth
+    description: Authentication and authorization
+  - name: Users
+    description: User profile management
+  - name: Projects
+    description: Project CRUD operations
+  - name: Bids
+    description: Bidding system
+  - name: Contracts
+    description: Contract management
+  - name: Payments
+    description: Payment and escrow operations
+  - name: Messages
+    description: Real-time messaging
+  - name: Reviews
+    description: Rating and review system
+  - name: Disputes
+    description: Dispute resolution
+  - name: Admin
+    description: Admin operations
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ==================== AUTH ====================
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, fullName, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                fullName:
+                  type: string
+                role:
+                  type: string
+                  enum: [FREELANCER, CLIENT]
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already exists
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout user
+      responses:
+        '204':
+          description: Logout successful
+
+  # ==================== USERS ====================
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+    patch:
+      tags: [Users]
+      summary: Update current user profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                avatarUrl:
+                  type: string
+                profileData:
+                  type: object
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{userId}/kyc:
+    post:
+      tags: [Users]
+      summary: Submit KYC verification
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [documentType, document]
+              properties:
+                documentType:
+                  type: string
+                  enum: [PASSPORT, DRIVERS_LICENSE, NATIONAL_ID]
+                document:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: KYC submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KYCVerification'
+
+  # ==================== PROJECTS ====================
+  /projects:
+    get:
+      tags: [Projects]
+      summary: List projects with filters
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, OPEN, IN_PROGRESS, COMPLETED, CANCELLED]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [FIXED_PRICE, HOURLY, CONTEST]
+        - name: skills
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: budgetMin
+          in: query
+          schema:
+            type: number
+        - name: budgetMax
+          in: query
+          schema:
+            type: number
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Projects]
+      summary: Create new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /projects/{projectId}:
+    get:
+      tags: [Projects]
+      summary: Get project by ID
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Projects]
+      summary: Update project
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+    delete:
+      tags: [Projects]
+      summary: Delete project
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '204':
+          description: Project deleted
+
+  /projects/{projectId}/bids:
+    get:
+      tags: [Bids]
+      summary: Get bids for project
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: List of bids
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bid'
+
+  # ==================== BIDS ====================
+  /bids:
+    post:
+      tags: [Bids]
+      summary: Submit bid on project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidCreate'
+      responses:
+        '201':
+          description: Bid submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+
+  /bids/{bidId}:
+    get:
+      tags: [Bids]
+      summary: Get bid by ID
+      parameters:
+        - $ref: '#/components/parameters/BidId'
+      responses:
+        '200':
+          description: Bid details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+
+    patch:
+      tags: [Bids]
+      summary: Update bid
+      parameters:
+        - $ref: '#/components/parameters/BidId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                deliveryDays:
+                  type: integer
+                proposal:
+                  type: string
+      responses:
+        '200':
+          description: Bid updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bid'
+
+    delete:
+      tags: [Bids]
+      summary: Withdraw bid
+      parameters:
+        - $ref: '#/components/parameters/BidId'
+      responses:
+        '204':
+          description: Bid withdrawn
+
+  /bids/{bidId}/accept:
+    post:
+      tags: [Bids]
+      summary: Accept bid and create contract
+      parameters:
+        - $ref: '#/components/parameters/BidId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                milestones:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MilestoneCreate'
+      responses:
+        '201':
+          description: Contract created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+
+  # ==================== CONTRACTS ====================
+  /contracts:
+    get:
+      tags: [Contracts]
+      summary: List user contracts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, COMPLETED, CANCELLED, DISPUTED]
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of contracts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Contract'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /contracts/{contractId}:
+    get:
+      tags: [Contracts]
+      summary: Get contract by ID
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+      responses:
+        '200':
+          description: Contract details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+
+  /contracts/{contractId}/milestones:
+    get:
+      tags: [Contracts]
+      summary: Get contract milestones
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+      responses:
+        '200':
+          description: List of milestones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Milestone'
+
+  /contracts/{contractId}/milestones/{milestoneId}/submit:
+    post:
+      tags: [Contracts]
+      summary: Submit milestone for review
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/MilestoneId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deliverables:
+                  type: array
+                  items:
+                    type: string
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Milestone submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Milestone'
+
+  /contracts/{contractId}/milestones/{milestoneId}/approve:
+    post:
+      tags: [Contracts]
+      summary: Approve milestone and release payment
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/MilestoneId'
+      responses:
+        '200':
+          description: Milestone approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Milestone'
+
+  /contracts/{contractId}/milestones/{milestoneId}/reject:
+    post:
+      tags: [Contracts]
+      summary: Reject milestone
+      parameters:
+        - $ref: '#/components/parameters/ContractId'
+        - $ref: '#/components/parameters/MilestoneId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Milestone rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Milestone'
+
+  # ==================== PAYMENTS ====================
+  /payments/create-intent:
+    post:
+      tags: [Payments]
+      summary: Create payment intent for escrow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contractId, amount]
+              properties:
+                contractId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+      responses:
+        '200':
+          description: Payment intent created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientSecret:
+                    type: string
+                  paymentIntentId:
+                    type: string
+
+  /payments/webhook:
+    post:
+      tags: [Payments]
+      summary: Payment gateway webhook
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+
+  /payments/transactions:
+    get:
+      tags: [Payments]
+      summary: Get user transactions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  # ==================== MESSAGES ====================
+  /messages:
+    get:
+      tags: [Messages]
+      summary: Get messages for project
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Messages]
+      summary: Send message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, content]
+              properties:
+                projectId:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+                attachments:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /messages/{messageId}/read:
+    patch:
+      tags: [Messages]
+      summary: Mark message as read
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Message marked as read
+
+  # ==================== REVIEWS ====================
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Submit review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contractId, revieweeId, rating]
+              properties:
+                contractId:
+                  type: string
+                  format: uuid
+                revieweeId:
+                  type: string
+                  format: uuid
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Review submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+
+  /reviews/user/{userId}:
+    get:
+      tags: [Reviews]
+      summary: Get reviews for user
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  # ==================== DISPUTES ====================
+  /disputes:
+    post:
+      tags: [Disputes]
+      summary: File dispute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contractId, reason]
+              properties:
+                contractId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                evidence:
+                  type: object
+      responses:
+        '201':
+          description: Dispute filed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+
+  /disputes/{disputeId}:
+    get:
+      tags: [Disputes]
+      summary: Get dispute by ID
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dispute details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+
+  # ==================== ADMIN ====================
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users (admin only)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /admin/users/{userId}/verify:
+    post:
+      tags: [Admin]
+      summary: Verify user (admin only)
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User verified
+
+  /admin/disputes/{disputeId}/resolve:
+    post:
+      tags: [Admin]
+      summary: Resolve dispute (admin only)
+      parameters:
+        - name: disputeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolution]
+              properties:
+                resolution:
+                  type: string
+                refundAmount:
+                  type: number
+      responses:
+        '200':
+          description: Dispute resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispute'
+
+  /admin/analytics:
+    get:
+      tags: [Admin]
+      summary: Get platform analytics (admin only)
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gmv:
+                    type: number
+                  totalProjects:
+                    type: integer
+                  totalUsers:
+                    type: integer
+                  activeContracts:
+                    type: integer
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    BidId:
+      name: bidId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ContractId:
+      name: contractId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    MilestoneId:
+      name: milestoneId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [FREELANCER, CLIENT, ADMIN]
+        fullName:
+          type: string
+        avatarUrl:
+          type: string
+        profileData:
+          type: object
+        rating:
+          type: number
+        totalReviews:
+          type: integer
+        isVerified:
+          type: boolean
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [FIXED_PRICE, HOURLY, CONTEST]
+        status:
+          type: string
+          enum: [DRAFT, OPEN, IN_PROGRESS, COMPLETED, CANCELLED]
+        budgetMin:
+          type: number
+        budgetMax:
+          type: number
+        deadline:
+          type: string
+          format: date
+        visibility:
+          type: string
+          enum: [PUBLIC, INVITE_ONLY, PRIVATE]
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        client:
+          $ref: '#/components/schemas/User'
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+
+    ProjectCreate:
+      type: object
+      required: [title, description, type, budgetMin, budgetMax]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [FIXED_PRICE, HOURLY, CONTEST]
+        budgetMin:
+          type: number
+        budgetMax:
+          type: number
+        deadline:
+          type: string
+          format: date
+        visibility:
+          type: string
+          enum: [PUBLIC, INVITE_ONLY, PRIVATE]
+        skillIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    ProjectUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, OPEN, IN_PROGRESS, COMPLETED, CANCELLED]
+        budgetMin:
+          type: number
+        budgetMax:
+          type: number
+        deadline:
+          type: string
+          format: date
+
+    Bid:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        freelancerId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        deliveryDays:
+          type: integer
+        proposal:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, SHORTLISTED, ACCEPTED, REJECTED, WITHDRAWN]
+        createdAt:
+          type: string
+          format: date-time
+        freelancer:
+          $ref: '#/components/schemas/User'
+
+    BidCreate:
+      type: object
+      required: [projectId, amount, deliveryDays, proposal]
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        deliveryDays:
+          type: integer
+        proposal:
+          type: string
+
+    Contract:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        bidId:
+          type: string
+          format: uuid
+        freelancerId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        totalAmount:
+          type: number
+        status:
+          type: string
+          enum: [ACTIVE, COMPLETED, CANCELLED, DISPUTED]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        project:
+          $ref: '#/components/schemas/Project'
+        freelancer:
+          $ref: '#/components/schemas/User'
+        client:
+          $ref: '#/components/schemas/User'
+        milestones:
+          type: array
+          items:
+            $ref: '#/components/schemas/Milestone'
+
+    Milestone:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        contractId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [PENDING, IN_PROGRESS, SUBMITTED, APPROVED, REJECTED]
+        releasedAt:
+          type: string
+          format: date-time
+
+    MilestoneCreate:
+      type: object
+      required: [title, amount]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        contractId:
+          type: string
+          format: uuid
+        fromUserId:
+          type: string
+          format: uuid
+        toUserId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        platformFee:
+          type: number
+        type:
+          type: string
+          enum: [ESCROW_LOCK, MILESTONE_RELEASE, REFUND, WITHDRAWAL]
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED, REFUNDED]
+        paymentGatewayId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        content:
+          type: string
+        attachments:
+          type: array
+          items:
+            type: object
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        sender:
+          $ref: '#/components/schemas/User'
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        contractId:
+          type: string
+          format: uuid
+        reviewerId:
+          type: string
+          format: uuid
+        revieweeId:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        reviewer:
+          $ref: '#/components/schemas/User'
+
+    Dispute:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        contractId:
+          type: string
+          format: uuid
+        filedBy:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        evidence:
+          type: object
+        status:
+          type: string
+          enum: [OPEN, UNDER_REVIEW, RESOLVED, CLOSED]
+        resolvedBy:
+          type: string
+          format: uuid
+        resolution:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+
+    Skill:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+
+    KYCVerification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        documentType:
+          type: string
+        documentUrl:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        rejectionReason:
+          type: string
+        verifiedAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

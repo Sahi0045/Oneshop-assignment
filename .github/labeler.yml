@@ -1,0 +1,313 @@
+# =============================================================================
+# GitHub Actions Labeler Configuration
+# Used by: .github/workflows/pr-checks.yml (actions/labeler@v5)
+#
+# Docs: https://github.com/actions/labeler
+# Syntax: each key is a label name; value is a list of glob path patterns.
+# A label is applied when ANY of its patterns match a changed file.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Application Labels
+# -----------------------------------------------------------------------------
+"app: web":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/web/**"
+
+"app: mobile":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/mobile/**"
+
+# -----------------------------------------------------------------------------
+# Package Labels
+# -----------------------------------------------------------------------------
+"pkg: backend":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/**"
+
+"pkg: shared":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/shared/**"
+
+# -----------------------------------------------------------------------------
+# Domain / Feature Labels (cross-cutting)
+# -----------------------------------------------------------------------------
+"domain: auth":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/auth/**"
+          - "apps/web/app/**/login/**"
+          - "apps/web/app/**/register/**"
+          - "apps/web/app/**/auth/**"
+          - "apps/mobile/app/**/auth/**"
+          - "packages/shared/src/schemas/auth*"
+          - "packages/shared/src/types/auth*"
+
+"domain: payments":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/payments/**"
+          - "packages/backend/src/payment/**"
+          - "apps/web/app/**/payments/**"
+          - "apps/web/app/**/checkout/**"
+          - "apps/mobile/app/**/payments/**"
+          - "packages/shared/src/schemas/payment*"
+          - "packages/shared/src/types/payment*"
+
+"domain: jobs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/jobs/**"
+          - "packages/backend/src/project/**"
+          - "apps/web/app/**/jobs/**"
+          - "apps/web/app/**/projects/**"
+          - "apps/mobile/app/**/jobs/**"
+          - "packages/shared/src/schemas/job*"
+          - "packages/shared/src/types/job*"
+
+"domain: chat":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/chat/**"
+          - "apps/web/app/**/chat/**"
+          - "apps/web/app/**/messages/**"
+          - "apps/mobile/app/**/chat/**"
+          - "packages/shared/src/schemas/chat*"
+          - "packages/shared/src/types/chat*"
+
+"domain: notifications":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/notifications/**"
+          - "apps/web/app/**/notifications/**"
+          - "apps/mobile/app/**/notifications/**"
+          - "packages/shared/src/schemas/notification*"
+          - "packages/shared/src/types/notification*"
+
+"domain: search":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/search/**"
+          - "apps/web/app/**/search/**"
+          - "apps/mobile/app/**/search/**"
+
+"domain: files":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/files/**"
+          - "packages/backend/src/upload/**"
+
+"domain: users":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/users/**"
+          - "packages/backend/src/profiles/**"
+          - "apps/web/app/**/profile/**"
+          - "apps/mobile/app/**/profile/**"
+          - "packages/shared/src/schemas/user*"
+          - "packages/shared/src/types/user*"
+
+# -----------------------------------------------------------------------------
+# Infrastructure / Database Labels
+# -----------------------------------------------------------------------------
+"infra: database":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/shared/prisma/**"
+          - "**/prisma/schema.prisma"
+          - "**/prisma/migrations/**"
+          - "**/prisma/seed*"
+          - "**/prisma/seeds/**"
+
+"infra: docker":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docker-compose.yml"
+          - "docker-compose*.yml"
+          - "**/Dockerfile"
+          - "**/.dockerignore"
+          - "docker/**"
+
+"infra: kafka":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/**/kafka/**"
+          - "packages/backend/src/**/events/**"
+          - "packages/backend/src/**/messaging/**"
+
+"infra: redis":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/**/redis/**"
+          - "packages/backend/src/**/cache/**"
+          - "packages/backend/src/**/queue/**"
+
+# -----------------------------------------------------------------------------
+# CI / CD Labels
+# -----------------------------------------------------------------------------
+"ci/cd":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - ".github/workflows/**"
+          - "turbo.json"
+
+"ci: ci-pipeline":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/ci.yml"
+
+"ci: cd-pipeline":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/cd.yml"
+
+"ci: pr-checks":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/pr-checks.yml"
+          - ".github/labeler.yml"
+
+# -----------------------------------------------------------------------------
+# Configuration / Build Labels
+# -----------------------------------------------------------------------------
+"config: monorepo":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "turbo.json"
+          - "pnpm-workspace.yaml"
+          - "package.json"
+          - "pnpm-lock.yaml"
+
+"config: typescript":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/tsconfig.json"
+          - "**/tsconfig*.json"
+
+"config: linting":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/.eslintrc"
+          - "**/.eslintrc.js"
+          - "**/.eslintrc.cjs"
+          - "**/.eslintrc.json"
+          - "**/.eslintrc.yaml"
+          - "**/.eslintrc.yml"
+          - "**/eslint.config.js"
+          - "**/eslint.config.ts"
+          - "**/eslint.config.mjs"
+          - "**/.eslintignore"
+          - "**/.prettierrc"
+          - "**/.prettierrc.js"
+          - "**/.prettierrc.json"
+          - "**/.prettierrc.yaml"
+          - "**/.prettierrc.yml"
+          - "**/prettier.config.js"
+          - "**/.prettierignore"
+
+"config: env":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".env.example"
+          - "**/.env.example"
+
+# -----------------------------------------------------------------------------
+# Dependencies Label
+# -----------------------------------------------------------------------------
+"dependencies":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pnpm-lock.yaml"
+          - "**/package.json"
+          - "!package.json"
+
+# -----------------------------------------------------------------------------
+# Testing Labels
+# -----------------------------------------------------------------------------
+"testing":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.test.ts"
+          - "**/*.test.tsx"
+          - "**/*.spec.ts"
+          - "**/*.spec.tsx"
+          - "**/__tests__/**"
+          - "**/test/**"
+          - "**/tests/**"
+          - "**/e2e/**"
+          - "**/jest.config*"
+          - "**/vitest.config*"
+          - "**/playwright.config*"
+
+# -----------------------------------------------------------------------------
+# Documentation Labels
+# -----------------------------------------------------------------------------
+"documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "**/*.mdx"
+          - "docs/**"
+          - ".github/*.md"
+          - "CHANGELOG*"
+          - "LICENSE*"
+          - "CONTRIBUTING*"
+          - "CODE_OF_CONDUCT*"
+
+# -----------------------------------------------------------------------------
+# Security Labels
+# -----------------------------------------------------------------------------
+"security":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packages/backend/src/auth/**"
+          - "packages/backend/src/**/guards/**"
+          - "packages/backend/src/**/middleware/**"
+          - "**/helmet*"
+          - "**/cors*"
+          - "**/.snyk"
+
+# -----------------------------------------------------------------------------
+# UI / Styling Labels
+# -----------------------------------------------------------------------------
+"ui: components":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/web/components/**"
+          - "apps/web/src/components/**"
+          - "apps/mobile/components/**"
+
+"ui: styling":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.css"
+          - "**/*.scss"
+          - "**/*.sass"
+          - "**/tailwind.config*"
+          - "**/postcss.config*"
+          - "apps/web/styles/**"
+
+# -----------------------------------------------------------------------------
+# Release Labels
+# -----------------------------------------------------------------------------
+"release: breaking-change":
+  - head-branch:
+      - "^hotfix/.*"
+
+"release: patch":
+  - head-branch:
+      - "^fix/.*"
+
+"release: minor":
+  - head-branch:
+      - "^feat/.*"
+      - "^feature/.*"
+
+"release: major":
+  - head-branch:
+      - "^breaking/.*"

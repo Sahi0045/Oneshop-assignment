@@ -1,0 +1,339 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # JOB 1 — Validate PR title follows Conventional Commits specification
+  # ---------------------------------------------------------------------------
+  validate-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title format
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Allowed commit types (aligned with Angular/Conventional Commits)
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+            wip
+          # Allowed scopes (optional — enforced when provided)
+          scopes: |
+            web
+            mobile
+            backend
+            shared
+            auth
+            jobs
+            payments
+            notifications
+            search
+            api
+            db
+            infra
+            deps
+            release
+          requireScope: false
+          subjectPattern: ^[A-Z].+[^.]$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}" didn't match the required
+            pattern. Please ensure that the subject starts with an uppercase letter and does not end
+            with a period.
+          wip: true
+          validateSingleCommit: false
+
+  # ---------------------------------------------------------------------------
+  # JOB 2 — Validate all commit messages in the PR branch
+  # ---------------------------------------------------------------------------
+  validate-commits:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install commitlint
+        run: |
+          npm install --global \
+            @commitlint/cli@19 \
+            @commitlint/config-conventional@19
+
+      - name: Create commitlint config
+        run: |
+          cat <<'EOF' > commitlint.config.js
+          module.exports = {
+            extends: ['@commitlint/config-conventional'],
+            rules: {
+              'type-enum': [
+                2,
+                'always',
+                [
+                  'feat', 'fix', 'docs', 'style', 'refactor',
+                  'perf', 'test', 'build', 'ci', 'chore', 'revert', 'wip'
+                ],
+              ],
+              'scope-case': [2, 'always', 'lower-case'],
+              'subject-case': [0],
+              'subject-empty': [2, 'never'],
+              'subject-full-stop': [2, 'never', '.'],
+              'header-max-length': [2, 'always', 100],
+              'body-max-line-length': [1, 'always', 200],
+            },
+          };
+          EOF
+
+      - name: Lint commits from PR base to HEAD
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Linting commits from $BASE_SHA to $HEAD_SHA"
+          commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+
+  # ---------------------------------------------------------------------------
+  # JOB 3 — Auto-label PR based on changed files
+  # ---------------------------------------------------------------------------
+  label-by-files:
+    name: Label PR by Changed Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Label PR based on changed paths
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+          sync-labels: true
+
+  # ---------------------------------------------------------------------------
+  # JOB 4 — Add size label based on total lines changed
+  # ---------------------------------------------------------------------------
+  label-size:
+    name: Label PR Size
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add size label
+        uses: codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_max_size: 10
+          s_max_size: 100
+          m_max_size: 500
+          l_max_size: 1000
+          # Anything above 1000 lines → XL
+          xs_label: "size: XS"
+          s_label: "size: S"
+          m_label: "size: M"
+          l_label: "size: L"
+          xl_label: "size: XL"
+          # Exclude auto-generated or vendored files from the count
+          files_to_ignore: |
+            "pnpm-lock.yaml"
+            "package-lock.json"
+            "yarn.lock"
+            "*.snap"
+            "*.min.js"
+            "*.min.css"
+            "dist/**"
+            "build/**"
+            ".next/**"
+            "coverage/**"
+            "prisma/migrations/**"
+
+  # ---------------------------------------------------------------------------
+  # JOB 5 — Post a summary comment on the PR
+  # ---------------------------------------------------------------------------
+  pr-summary:
+    name: PR Summary Comment
+    runs-on: ubuntu-latest
+    needs:
+      - validate-pr-title
+      - validate-commits
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gather changed packages
+        id: changed
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+
+          HAS_WEB="false"
+          HAS_MOBILE="false"
+          HAS_BACKEND="false"
+          HAS_SHARED="false"
+          HAS_CI="false"
+          HAS_DOCS="false"
+
+          echo "$CHANGED_FILES" | grep -q "^apps/web/"        && HAS_WEB="true"     || true
+          echo "$CHANGED_FILES" | grep -q "^apps/mobile/"     && HAS_MOBILE="true"  || true
+          echo "$CHANGED_FILES" | grep -q "^packages/backend/"&& HAS_BACKEND="true" || true
+          echo "$CHANGED_FILES" | grep -q "^packages/shared/" && HAS_SHARED="true"  || true
+          echo "$CHANGED_FILES" | grep -q "^\.github/"        && HAS_CI="true"      || true
+          echo "$CHANGED_FILES" | grep -q "\.md$"             && HAS_DOCS="true"    || true
+
+          echo "has_web=$HAS_WEB"         >> "$GITHUB_OUTPUT"
+          echo "has_mobile=$HAS_MOBILE"   >> "$GITHUB_OUTPUT"
+          echo "has_backend=$HAS_BACKEND" >> "$GITHUB_OUTPUT"
+          echo "has_shared=$HAS_SHARED"   >> "$GITHUB_OUTPUT"
+          echo "has_ci=$HAS_CI"           >> "$GITHUB_OUTPUT"
+          echo "has_docs=$HAS_DOCS"       >> "$GITHUB_OUTPUT"
+
+          TOTAL_ADDED=$(git diff --shortstat "$BASE_SHA" "$HEAD_SHA" | awk '{print $4}' | tr -d ',')
+          TOTAL_DELETED=$(git diff --shortstat "$BASE_SHA" "$HEAD_SHA" | awk '{print $6}' | tr -d ',')
+          TOTAL_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | wc -l | tr -d ' ')
+
+          echo "total_added=${TOTAL_ADDED:-0}"     >> "$GITHUB_OUTPUT"
+          echo "total_deleted=${TOTAL_DELETED:-0}" >> "$GITHUB_OUTPUT"
+          echo "total_files=${TOTAL_FILES:-0}"     >> "$GITHUB_OUTPUT"
+
+      - name: Find existing summary comment
+        id: find-comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: "<!-- pr-checks-summary -->"
+
+      - name: Create or update summary comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            <!-- pr-checks-summary -->
+            ## PR Checks Summary
+
+            | Check | Status |
+            |-------|--------|
+            | PR Title (Conventional Commits) | ${{ needs.validate-pr-title.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | Commit Messages | ${{ needs.validate-commits.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+
+            ### Changed Packages
+            | Package | Affected |
+            |---------|----------|
+            | `apps/web` (Next.js) | ${{ steps.changed.outputs.has_web == 'true' && '🔄 Yes' || '— No' }} |
+            | `apps/mobile` (Expo) | ${{ steps.changed.outputs.has_mobile == 'true' && '🔄 Yes' || '— No' }} |
+            | `packages/backend` (NestJS) | ${{ steps.changed.outputs.has_backend == 'true' && '🔄 Yes' || '— No' }} |
+            | `packages/shared` (Zod/Prisma) | ${{ steps.changed.outputs.has_shared == 'true' && '🔄 Yes' || '— No' }} |
+            | CI / GitHub Actions | ${{ steps.changed.outputs.has_ci == 'true' && '🔄 Yes' || '— No' }} |
+            | Documentation | ${{ steps.changed.outputs.has_docs == 'true' && '🔄 Yes' || '— No' }} |
+
+            ### Diff Stats
+            - 📂 **Files changed:** `${{ steps.changed.outputs.total_files }}`
+            - ➕ **Lines added:** `${{ steps.changed.outputs.total_added }}`
+            - ➖ **Lines deleted:** `${{ steps.changed.outputs.total_deleted }}`
+
+            ---
+            > _Updated automatically by the PR Checks workflow on every push._
+
+  # ---------------------------------------------------------------------------
+  # JOB 6 — Enforce that the PR has at least one reviewer assigned
+  # ---------------------------------------------------------------------------
+  require-reviewer:
+    name: Require Reviewer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check reviewer assigned
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const reviewers = pr.requested_reviewers || [];
+            const teams = pr.requested_teams || [];
+
+            if (reviewers.length === 0 && teams.length === 0) {
+              core.warning(
+                'No reviewers have been assigned to this PR. ' +
+                'Please request at least one reviewer before merging.'
+              );
+            } else {
+              const names = [
+                ...reviewers.map(r => r.login),
+                ...teams.map(t => t.name),
+              ];
+              core.info(`Reviewers assigned: ${names.join(', ')}`);
+            }
+
+  # ---------------------------------------------------------------------------
+  # JOB 7 — Check for CHANGELOG or migration notes on large PRs
+  # ---------------------------------------------------------------------------
+  changelog-reminder:
+    name: Changelog / Migration Reminder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remind about changelog on large PRs or breaking changes
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title || '';
+            const body  = pr.body  || '';
+
+            const isBreaking =
+              title.includes('!') ||
+              title.toLowerCase().includes('breaking') ||
+              body.toLowerCase().includes('breaking change');
+
+            const isBig = (pr.additions + pr.deletions) > 500;
+
+            if (isBreaking) {
+              core.warning(
+                '⚠️  This PR appears to contain a BREAKING CHANGE. ' +
+                'Please update CHANGELOG.md and document any migration steps in the PR description.'
+              );
+            } else if (isBig) {
+              core.notice(
+                'ℹ️  This is a large PR (>500 lines changed). ' +
+                'Consider adding a summary to CHANGELOG.md.'
+              );
+            } else {
+              core.info('No changelog reminder needed for this PR.');
+            }
