@@ -144,14 +144,14 @@ export class BidService {
 
     // ── 8. Create bid + increment bidCount inside a transaction ───────────────
     const [bid] = await this.prisma.$transaction([
-      this.prisma.bid.create({
+      (this.prisma.bid as any).create({
         data: {
           projectId,
           freelancerId,
           amount: dto.amount,
           deliveryDays: dto.deliveryDays,
           coverLetter: dto.coverLetter,
-          milestones: (dto as any).milestones ?? [],
+          // milestones: (dto as any).milestones ?? [], // Milestone not in Bid model
           attachments: (dto as any).attachments ?? [],
           skillMatchScore,
           status: BidStatus.PENDING,

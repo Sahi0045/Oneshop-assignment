@@ -184,11 +184,7 @@ export function useSocket(
           setError(`Failed to reconnect after ${reconnectionAttempts} attempts`);
         });
 
-        socketRef.current = s => {
-          // Unused — just to satisfy eslint; real assignment below
-          void s;
-          return socket;
-        };
+        socketRef.current = socket;
 
         // Actually assign here (TS isn't happy with the above pattern so let's be direct)
         socketRef.current = socket;

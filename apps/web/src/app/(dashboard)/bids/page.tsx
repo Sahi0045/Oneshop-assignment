@@ -263,7 +263,7 @@ function BidCard({ bid, onWithdraw, isWithdrawing }: BidCardProps) {
 function EmptyBids({ tab }: { tab: TabValue }) {
   const config: Record<
     TabValue,
-    { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; title: string; description: string; cta?: string; ctaHref?: string }
+    { icon: any; title: string; description: string; cta?: string; ctaHref?: string }
   > = {
     all: {
       icon: Gavel,
@@ -426,8 +426,7 @@ export default function MyBidsPage() {
 
     // Find the bid to get its projectId
     const bid = allBids.find((b) => b.id === withdrawDialog.bidId);
-    const projectId =
-      (bid as BidWithDetails & { project?: { id: string } }).project?.id ?? "";
+    const projectId = (bid as any)?.project?.id ?? "";
 
     withdrawBidMutation.mutate(
       {
@@ -577,27 +576,21 @@ export default function MyBidsPage() {
         onValueChange={(v) => setActiveTab(v as TabValue)}
       >
         <TabsList variant="underline" className="w-full justify-start">
-          <TabsTrigger value="all" variant="underline" badge={counts.all || undefined}>
+          <TabsTrigger value="all">
             All
           </TabsTrigger>
           <TabsTrigger
             value="pending"
-            variant="underline"
-            badge={counts.pending || undefined}
           >
             Pending
           </TabsTrigger>
           <TabsTrigger
             value="accepted"
-            variant="underline"
-            badge={counts.accepted || undefined}
           >
             Accepted
           </TabsTrigger>
           <TabsTrigger
             value="rejected"
-            variant="underline"
-            badge={counts.rejected || undefined}
           >
             Rejected
           </TabsTrigger>

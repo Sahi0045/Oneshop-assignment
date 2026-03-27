@@ -18,6 +18,7 @@ import type {
   CreateBidInput,
   PaginatedResponse,
 } from '@freelancer/shared';
+import { BidStatus } from '@freelancer/shared';
 
 // ─── Re-export a lean paginated type that matches our API wrapper ─────────────
 
@@ -382,7 +383,7 @@ export function useWithdrawBid() {
         return {
           ...old,
           data: old.data.map((b) =>
-            b.id === bidId ? { ...b, status: 'WITHDRAWN' as const } : b,
+            b.id === bidId ? { ...b, status: BidStatus.WITHDRAWN } : b,
           ),
         };
       };

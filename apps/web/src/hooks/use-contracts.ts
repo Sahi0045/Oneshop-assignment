@@ -18,6 +18,7 @@ import type {
   ContractStats,
   EscrowSummary,
 } from '@freelancer/shared';
+import { MilestoneStatus } from '@freelancer/shared';
 
 // ─── Response shapes ──────────────────────────────────────────────────────────
 
@@ -328,7 +329,7 @@ export function useSubmitMilestone(): UseMutationResult<
                 m.id === variables.milestoneId
                   ? {
                       ...m,
-                      status: 'SUBMITTED' as const,
+                      status: MilestoneStatus.SUBMITTED,
                       submissionNote: variables.submissionNote,
                       submissionAttachments:
                         variables.submissionAttachments ?? [],
@@ -391,7 +392,7 @@ export function useApproveMilestone(): UseMutationResult<
                 m.id === variables.milestoneId
                   ? {
                       ...m,
-                      status: 'APPROVED' as const,
+                      status: MilestoneStatus.APPROVED,
                       reviewNote: variables.reviewNote,
                     }
                   : m,
@@ -444,7 +445,7 @@ export function useRequestRevision(): UseMutationResult<
                 m.id === variables.milestoneId
                   ? {
                       ...m,
-                      status: 'REVISION_REQUESTED' as const,
+                      status: MilestoneStatus.REVISION_REQUESTED,
                       reviewNote: variables.reviewNote,
                     }
                   : m,

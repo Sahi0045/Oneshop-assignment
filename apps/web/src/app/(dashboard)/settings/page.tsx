@@ -191,9 +191,9 @@ export default function SettingsPage() {
 
       <Tabs defaultValue="profile">
         <TabsList variant="underline" className="w-full justify-start">
-          <TabsTrigger value="profile" variant="underline" className="gap-1.5"><User className="h-4 w-4" />Profile</TabsTrigger>
-          <TabsTrigger value="security" variant="underline" className="gap-1.5"><Lock className="h-4 w-4" />Security</TabsTrigger>
-          <TabsTrigger value="notifications" variant="underline" className="gap-1.5"><Bell className="h-4 w-4" />Notifications</TabsTrigger>
+          <TabsTrigger value="profile" className="gap-1.5"><User className="h-4 w-4" />Profile</TabsTrigger>
+          <TabsTrigger value="security" className="gap-1.5"><Lock className="h-4 w-4" />Security</TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-4 w-4" />Notifications</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="mt-6">

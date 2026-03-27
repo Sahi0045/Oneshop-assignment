@@ -328,7 +328,7 @@ export default function ContractDetailPage() {
                   <UserAvatar src={counterpart.avatar} firstName={counterpart.firstName} lastName={counterpart.lastName} size="md" />
                   <div>
                     <p className="font-semibold text-sm">{counterpart.firstName} {counterpart.lastName}</p>
-                    <p className="text-xs text-muted-foreground">{counterpart.email}</p>
+                    <p className="text-xs text-muted-foreground">{(counterpart as any).email}</p>
                   </div>
                 </div>
               </CardContent>

@@ -28,7 +28,7 @@ export class AdminService {
       this.prisma.project.count({ where: { status: 'OPEN' } }),
       this.prisma.dispute.count({ where: { status: 'OPEN' } }),
       this.prisma.bid.count({ where: { status: 'PENDING' } }),
-      (this.prisma as any).payment.aggregate({
+      this.prisma.payment.aggregate({
         _sum: { amount: true },
         where: {
           createdAt: {
@@ -90,10 +90,8 @@ export class AdminService {
         lastName: true,
         email: true,
         role: true,
-        // @ts-ignore
         isKycVerified: true,
         isActive: true,
-        // @ts-ignore
         isBanned: true,
         createdAt: true,
         avatar: true,
@@ -113,7 +111,6 @@ export class AdminService {
 
     return this.prisma.user.update({
       where: { id: userId },
-      // @ts-ignore
       data: { isKycVerified: true },
     });
   }
@@ -130,11 +127,8 @@ export class AdminService {
     return this.prisma.user.update({
       where: { id: userId },
       data: {
-        // @ts-ignore
         isBanned: true,
-        // @ts-ignore
         banReason: reason,
-        // @ts-ignore
         bannedAt: new Date(),
       },
     });
@@ -150,7 +144,6 @@ export class AdminService {
     }
 
     // Create a notification/warning record
-    // @ts-ignore
     await this.prisma.notification.create({
       data: {
         userId,
@@ -223,7 +216,7 @@ export class AdminService {
       const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
       const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
-      const result = await (this.prisma as any).payment.aggregate({
+      const result = await this.prisma.payment.aggregate({
         _sum: { amount: true },
         where: {
           createdAt: {

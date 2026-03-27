@@ -359,7 +359,7 @@ export function useUpdateProject() {
       // Optimistic update
       queryClient.setQueryData<ProjectWithDetails>(
         projectKeys.detail(id),
-        (old) => (old ? { ...old, ...data } : old),
+        (old) => (old ? { ...old, ...(data as any) } : old),
       );
 
       return { snapshot };

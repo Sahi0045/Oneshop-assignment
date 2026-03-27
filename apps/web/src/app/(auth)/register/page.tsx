@@ -22,12 +22,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { UserRole } from '@freelancer/shared';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const registerSchema = z
   .object({
-    role: z.enum(['CLIENT', 'FREELANCER'], {
+    role: z.nativeEnum(UserRole, {
       required_error: 'Please select a role',
     }),
     firstName: z
@@ -102,7 +103,7 @@ function getPasswordStrength(password: string): StrengthResult {
 
 const roles = [
   {
-    value: 'CLIENT' as const,
+    value: UserRole.CLIENT,
     icon: Briefcase,
     title: 'I want to hire',
     description: 'Post projects and find top freelancers for your needs.',
@@ -114,7 +115,7 @@ const roles = [
     checkColor: 'text-blue-600',
   },
   {
-    value: 'FREELANCER' as const,
+    value: UserRole.FREELANCER,
     icon: Code2,
     title: 'I want to work',
     description: 'Browse projects and get paid for your expertise.',
@@ -172,7 +173,7 @@ export default function RegisterPage() {
       lastName: data.lastName,
       email: data.email,
       password: data.password,
-      role: data.role as 'CLIENT' | 'FREELANCER',
+      role: data.role as any,
     });
   };
 
@@ -275,14 +276,16 @@ export default function RegisterPage() {
                   />
 
                   {/* Selected checkmark */}
-                  <CheckCircle2
-                    className={cn(
-                      'absolute right-3 top-3 h-4 w-4 transition-all duration-200',
-                      role.checkColor,
-                      isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'
-                    )}
-                    aria-hidden
-                  />
+                  {mounted && (
+                    <CheckCircle2
+                      className={cn(
+                        'absolute right-3 top-3 h-4 w-4 transition-all duration-200',
+                        role.checkColor,
+                        isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'
+                      )}
+                      aria-hidden
+                    />
+                  )}
 
                   {/* Icon */}
                   <div
@@ -291,7 +294,11 @@ export default function RegisterPage() {
                       role.iconBg,
                     )}
                   >
-                    <Icon className={cn('h-5 w-5', role.iconColor)} />
+                    {mounted ? (
+                      <Icon className={cn('h-5 w-5', role.iconColor)} />
+                    ) : (
+                      <div className="h-5 w-5" />
+                    )}
                   </div>
 
                   {/* Text */}

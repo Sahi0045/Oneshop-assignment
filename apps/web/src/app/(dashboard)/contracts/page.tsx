@@ -123,7 +123,7 @@ export default function ContractsPage() {
       <Tabs value={tab} onValueChange={v => setTab(v as TabValue)}>
         <TabsList variant="underline" className="w-full justify-start">
           {(['all', 'ACTIVE', 'COMPLETED', 'PAUSED', 'CANCELLED'] as TabValue[]).map(t => (
-            <TabsTrigger key={t} value={t} variant="underline" badge={counts[t] || undefined}>
+            <TabsTrigger key={t} value={t}>
               {t === 'all' ? 'All' : t.charAt(0) + t.slice(1).toLowerCase()}
             </TabsTrigger>
           ))}
